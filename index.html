@@ -99,7 +99,7 @@ button{cursor:pointer}
 .legend{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--line)}
 .legend span{font-size:11px;display:inline-flex;align-items:center;gap:5px}
 .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
-.dot.tarde{background:#fff2d7}.dot.manha{background:#dce9ff}.dot.folga{background:#ffe1df}
+.dot.tarde{background:#fff2d7}.dot.manha{background:#dce9ff}.dot.folga{background:#ffe1df}.dot.trabalho{background:#dff4e6}.dot.feriado{background:#e1f6e9}.dot.ferias{background:#f1e3ff}
 .dot.domingo{background:#ededed}.dot.extra{background:#f1e3ff}.dot.feriado{background:#e1f6e9}
 
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.48);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
@@ -145,6 +145,8 @@ button{cursor:pointer}
 }
 .toast.show{opacity:1;transform:translateY(0)}
 .print-only{display:none}
+.print-signatures{display:none}
+@media print{.print-signatures{display:block;margin:4mm 2mm 0}.print-signatures h3{font-size:10px;margin:0 0 5mm}.signature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5mm 7mm}.signature-line{border-top:1px solid #333;padding-top:1.5mm;font-size:8px;min-height:8mm}.signature-line span{display:block;color:#555;font-size:7px;margin-top:.5mm}}
 @media(max-width:850px){
   .header{padding:12px 15px}.brand img{width:44px;height:44px}.brand h1{font-size:17px}
   .header-actions .btn{padding:8px 10px;font-size:11px}
@@ -155,12 +157,41 @@ button{cursor:pointer}
   .form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.check-grid{grid-template-columns:repeat(3,1fr)}
   .stats{gap:8px}.stat{padding:11px}.stat b{font-size:20px}
 }
+
+/* 5x2 grid enhancement */
+.schedule thead th{min-width:42px;height:46px;padding:4px 2px}
+.schedule thead th.name-head,.schedule td.name-cell{min-width:175px}
+.schedule tbody td{height:42px!important}
+.shift{min-width:29px;height:29px;border-radius:7px;font-size:11px;cursor:pointer;user-select:none}
+.shift.trabalho{background:#dff4e6;color:#146c3a}
+.shift.feriado{background:#e1f6e9;color:#14713f}
+.shift.ferias{background:#f1e3ff;color:#7336a8}
+.presence-row td{font-weight:900;background:#f7f7f7!important}
+.presence-row td.name-cell{background:#f7f7f7!important}
+.offday-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shift.manha{background:#dce9ff;color:#2456a6}
+.shift.folga{background:#ffe1df;color:#b62920}
+.shift.feriado{background:#e1f6e9;color:#14713f}
+.shift.ferias{background:#f1e3ff;color:#7336a8}
+.shift:hover{outline:2px solid var(--orange);outline-offset:1px}
+.schedule tr.presence-row td{height:36px!important;background:#f7f7f7;font-weight:800;color:#444}
+.schedule tr.presence-row td.name-cell{background:#f2f2f2}
+.week-group{font-size:11px;font-weight:800;letter-spacing:.2px}
+.week-odd{background:#f9e7a9!important;color:#5d4a00}
+.week-even{background:#dce8ff!important;color:#164c9e}
+.click-help{font-size:12px;color:#666;margin:0 0 12px}
+@media print{.shift{outline:none!important}.click-help{display:none}.schedule tbody td{height:26px!important}.schedule thead th{min-width:23px!important;height:28px!important;font-size:7px!important}.schedule td.name-cell,.schedule th.name-head{min-width:100px!important}.shift{min-width:16px!important;height:18px!important;font-size:7px!important;padding:0!important}}
+
 @media print{
+  @page{size:A4 landscape;margin:5mm}
+  html,body{width:100%;height:auto!important;margin:0!important;padding:0!important}
+  .app{width:90%;margin:0 auto;zoom:.9}
+  .schedule{width:100%;table-layout:fixed}
   .header-actions,.toolbar button,.stats,.legend,.modal-backdrop,.no-print{display:none!important}
   .header{position:static;background:#fff;color:#000;box-shadow:none;border-bottom:2px solid #000}
   .header img{display:none}.layout{padding:0}.card{box-shadow:none;border:0}
   .print-only{display:block}.table-wrap{overflow:visible}
-  .schedule{font-size:9px}.schedule th,.schedule td{border-color:#aaa}
+  .schedule{font-size:8px;width:100%;}.schedule th,.schedule td{border-color:#aaa;padding:1px!important}.schedule tbody td{height:18px!important}.schedule thead th{height:20px!important;font-size:6px!important}.schedule td.name-cell,.schedule th.name-head{min-width:75px!important}.shift{min-width:12px!important;height:13px!important;font-size:6px!important}
 }
 </style>
 </head>
@@ -169,7 +200,7 @@ button{cursor:pointer}
 <header class="header">
   <div class="brand">
     <img id="logo" alt="PetCamp">
-    <div><h1>Escala de Trabalho</h1><p>Planejamento mensal de colaboradores</p></div>
+    <div><h1>Escala de Trabalho</h1><p>Escala rotativa 5x2 • máximo de 5 dias consecutivos</p></div>
   </div>
   <div class="header-actions">
     <button class="btn btn-light" onclick="openEmployeeModal()">＋ Colaborador</button>
@@ -195,21 +226,25 @@ button{cursor:pointer}
   <div class="stats">
     <div class="stat"><b id="statPeople">0</b><span>colaboradores ativos</span></div>
     <div class="stat"><b id="statDays">0</b><span>dias no mês</span></div>
-    <div class="stat"><b id="statSundays">0</b><span>domingos trabalhados</span></div>
-    <div class="stat"><b id="statFolgas">0</b><span>folgas programadas</span></div>
+    <div class="stat"><b id="statSundays">0</b><span>domingos com trabalho</span></div>
+    <div class="stat"><b id="statFolgas">0</b><span>folgas no mês</span></div>
   </div>
 
   <section class="card">
+    <p class="click-help no-print">Escala automática em ciclo 5x2. Clique em qualquer célula para alternar entre Trabalho, Folga, Feriado e Férias. O sistema bloqueia ajustes que criem mais de 5 dias trabalhados consecutivos.</p>
     <div class="table-wrap">
       <table class="schedule" id="scheduleTable"></table>
     </div>
     <div class="legend">
-      <span><i class="dot tarde"></i> Tarde</span>
-      <span><i class="dot manha"></i> Manhã</span>
-      <span><i class="dot folga"></i> Folga semanal</span>
-      <span><i class="dot domingo"></i> Domingo trabalhado</span>
-      <span><i class="dot extra"></i> Folga extra</span>
-      <span><i class="dot feriado"></i> Feriado</span>
+      <span><i class="dot tarde"></i> Trabalho (T)</span>
+      <span><i class="dot folga"></i> Folga (F)</span>
+      <span><i class="dot feriado"></i> Feriado (H)</span>
+      <span><i class="dot extra"></i> Férias (V)</span>
+      <span><b>Presente</b> = total de pessoas escaladas para trabalhar naquele dia</span>
+    </div>
+    <div class="print-signatures">
+      <h3>Assinaturas</h3>
+      <div class="signature-grid" id="signatureGrid"></div>
     </div>
   </section>
 </main>
@@ -225,42 +260,15 @@ button{cursor:pointer}
       <div class="modal-body">
         <div class="form-grid">
           <div class="field full"><label>Nome do colaborador</label><input id="fName" required placeholder="Ex.: Maria Eduarda"></div>
-          <div class="field"><label>Turno padrão</label>
-            <select id="fDefaultShift"><option value="T1">Tarde</option><option value="M1">Manhã</option></select>
+          <div class="field"><label>Função</label>
+            <select id="fRole"><option value="staff">Colaborador</option><option value="manager">Gerente</option></select>
           </div>
-          <div class="field"><label>Dia de folga semanal</label>
-            <select id="fDayOff">
-              <option value="0">Domingo</option><option value="1">Segunda</option><option value="2">Terça</option>
-              <option value="3">Quarta</option><option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option>
-            </select>
-          </div>
+          <div class="field"><label>1ª folga fixa</label><select id="fOff1"></select></div>
+          <div class="field"><label>2ª folga fixa</label><select id="fOff2"></select></div>
         </div>
-
-        <div class="section-title">Domingos alternados</div>
-        <div class="form-grid">
-          <div class="field"><label>Domingo de referência</label><input id="fSundayAnchor" type="date"></div>
-          <div class="field"><label>Trabalha nesse domingo?</label>
-            <select id="fSundayWorks"><option value="true">Sim — é o domingo trabalhado</option><option value="false">Não — é o domingo de folga</option></select>
-          </div>
-        </div>
-        <div class="help">A partir da data de referência, o sistema alterna automaticamente: trabalha um domingo, folga o próximo. Isso evita ter que lançar domingo por domingo.</div>
-
-        <div class="section-title">Escala fixa da semana</div>
-        <div class="help" style="margin-bottom:10px">
-          Defina o turno de cada dia. Essa configuração se repete automaticamente em todos os meses.
-          A folga semanal escolhida acima fica como <b>Folga</b>.
-        </div>
-        <div class="weekly-grid" id="weeklyGrid">
-          <div class="weekly-row"><b>Segunda</b><select data-weekday="1"><option value="T1">Tarde</option><option value="M1">Manhã</option><option value="F">Folga</option></select></div>
-          <div class="weekly-row"><b>Terça</b><select data-weekday="2"><option value="T1">Tarde</option><option value="M1">Manhã</option><option value="F">Folga</option></select></div>
-          <div class="weekly-row"><b>Quarta</b><select data-weekday="3"><option value="T1">Tarde</option><option value="M1">Manhã</option><option value="F">Folga</option></select></div>
-          <div class="weekly-row"><b>Quinta</b><select data-weekday="4"><option value="T1">Tarde</option><option value="M1">Manhã</option><option value="F">Folga</option></select></div>
-          <div class="weekly-row"><b>Sexta</b><select data-weekday="5"><option value="T1">Tarde</option><option value="M1">Manhã</option><option value="F">Folga</option></select></div>
-          <div class="weekly-row"><b>Sábado</b><select data-weekday="6"><option value="T1">Tarde</option><option value="M1">Manhã</option><option value="F">Folga</option></select></div>
-        </div>
-        <div class="help" style="margin-top:9px">
-          Exemplo: Alison = segunda de manhã, terça de folga e quarta a sábado à tarde.
-        </div>
+        <div class="help" id="offDaysHelp">Folgas dos colaboradores ficam restritas a segunda, terça, quarta, quinta ou sexta. Sábado é protegido para manter equipe na loja.</div>
+        <div class="section-title">Regras automáticas de segurança</div>
+        <div class="help">A escala semanal será calculada com 5 dias de trabalho e 2 folgas fixas. O sistema permite folga aos sábados; nesse caso, o colaborador trabalha domingo. Folgas devem manter a cobertura mínima de 3 pessoas e não criar mais de 5 dias consecutivos trabalhados. O gerente possui folgas fixas domingo e segunda-feira.</div>
 
         <div class="section-title">Folgas extras / datas específicas</div>
         <div class="field">
@@ -282,11 +290,26 @@ button{cursor:pointer}
 <div class="modal-backdrop" id="manageModal">
   <div class="modal">
     <div class="modal-head"><h3>Colaboradores</h3><button class="close" onclick="closeManage()">×</button></div>
-    <div class="modal-body"><div class="help">As regras ficam salvas neste navegador. Depois podemos trocar isso por Firebase para uso em vários dispositivos.</div><div id="employeeList" class="employee-list"></div></div>
-    <div class="modal-foot"><button class="btn btn-orange" onclick="openEmployeeModal();closeManage()">＋ Novo colaborador</button></div>
+    <div class="modal-body"><div class="help">Escala 5x2 gerada automaticamente e ajustes manuais salvos neste navegador. Cada clique na célula alterna os códigos.</div><div id="employeeList" class="employee-list"></div></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="openSwapModal()">Trocar folga</button><button class="btn btn-orange" onclick="openEmployeeModal();closeManage()">＋ Novo colaborador</button></div>
   </div>
 </div>
 
+<div class="modal-backdrop" id="swapModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Trocar folga entre colaboradores</h3><button class="close" onclick="closeSwapModal()">×</button></div>
+    <div class="modal-body">
+      <div class="help">Selecione dois colaboradores e uma folga de cada. O sistema troca os dias e só salva se a cobertura mínima e o limite de 5 dias consecutivos forem respeitados.</div>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Colaborador 1</label><select id="swapEmp1" onchange="populateSwapOffs()"></select></div>
+        <div class="field"><label>Folga que será trocada</label><select id="swapOff1"></select></div>
+        <div class="field"><label>Colaborador 2</label><select id="swapEmp2" onchange="populateSwapOffs()"></select></div>
+        <div class="field"><label>Folga que será trocada</label><select id="swapOff2"></select></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="closeSwapModal()">Cancelar</button><button class="btn btn-orange" onclick="confirmSwapOffDays()">Confirmar troca</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -308,11 +331,18 @@ const weekNames = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const fullWeek = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
 const monthNames = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
-let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || { employees: [] };
+let data;
+try { data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || { employees: [] }; }
+catch(e) { data = { employees: [] }; localStorage.removeItem(STORAGE_KEY); }
+if(!data || typeof data!=="object" || !Array.isArray(data.employees)) data={employees:[]};
 let current = new Date();
 current.setDate(1);
 let editingId = null;
 let tempExtraDates = [];
+const overrideKey = "petcamp_escala_5x2_overrides_v1";
+let scheduleOverrides;
+try { scheduleOverrides = JSON.parse(localStorage.getItem(overrideKey)||"{}"); } catch(e) { scheduleOverrides={}; localStorage.removeItem(overrideKey); }
+if(!scheduleOverrides || typeof scheduleOverrides!=="object" || Array.isArray(scheduleOverrides)) scheduleOverrides={};
 
 function save(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -368,44 +398,129 @@ function initials(name){
   return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase();
 }
 
+function baseStatus(emp,d){
+  const day=d.getDay();
+  const offDays=(emp.offDays||[]).map(Number);
+  // Regra operacional: se o colaborador folga sábado, trabalha domingo.
+  // A exceção do gerente permanece com domingo e segunda fixos.
+  if(emp.role!=="manager" && offDays.includes(6) && day===0)
+    return {code:"T",label:"Domingo trabalhado (compensação do sábado)",cls:"domingo",working:true};
+  if(offDays.includes(day)) return {code:"F",label:"Folga fixa",cls:"folga",working:false};
+  return {code:"T",label:"Trabalho",cls:"trabalho",working:true};
+}
+function get5x2Status(emp,d){
+  const key=dateKey(d), eid=emp.id;
+  const over=scheduleOverrides[key]?.[eid];
+  if(over){
+    const map={T:{code:"T",label:"Trabalho",cls:"trabalho",working:true},F:{code:"F",label:"Folga",cls:"folga",working:false},H:{code:"H",label:"Feriado",cls:"feriado",working:false},V:{code:"V",label:"Férias",cls:"ferias",working:false}};
+    return map[over]||baseStatus(emp,d);
+  }
+  return baseStatus(emp,d);
+}
+function dateFromKey(k){return parseDate(k)}
+function isWorkingStatus(code){return code==="T"||code==="M";}
+function consecutiveWorkCount(emp, date, proposed){
+  // count maximum run including proposed cell; evaluate surrounding dates up to a generous 40-day window
+  const key=dateKey(date), old=scheduleOverrides[key]?.[emp.id];
+  if(proposed===null){if(scheduleOverrides[key]) delete scheduleOverrides[key][emp.id];}
+  else {scheduleOverrides[key] ||= {}; scheduleOverrides[key][emp.id]=proposed;}
+  let maxRun=0,run=0;
+  for(let i=-20;i<=20;i++){
+    const d=new Date(date.getFullYear(),date.getMonth(),date.getDate()+i);
+    const st=get5x2Status(emp,d);
+    if(st.working){run++;maxRun=Math.max(maxRun,run);}else run=0;
+  }
+  if(old!==undefined){scheduleOverrides[key] ||= {};scheduleOverrides[key][emp.id]=old;}else if(scheduleOverrides[key]){delete scheduleOverrides[key][emp.id];if(!Object.keys(scheduleOverrides[key]).length)delete scheduleOverrides[key];}
+  return maxRun;
+}
+function cycleCell(emp,d){
+  const current=get5x2Status(emp,d);
+  const order=["T","F","H","V"];
+  const next=order[(order.indexOf(current.code)+1)%order.length];
+  if(isWorkingStatus(next)&&consecutiveWorkCount(emp,d,next)>5){toast("Ajuste bloqueado: não pode ultrapassar 5 dias trabalhados consecutivos.");return;}
+  if(!isWorkingStatus(next)){
+    const present=data.employees.filter(e=>e.active!==false && e.id!==emp.id && get5x2Status(e,d).working).length;
+    if(present<3){toast("Ajuste bloqueado: a loja precisa manter pelo menos 3 pessoas presentes.");return;}
+  }
+  const key=dateKey(d);scheduleOverrides[key] ||= {};scheduleOverrides[key][emp.id]=next;
+  if(!Object.keys(scheduleOverrides[key]).length)delete scheduleOverrides[key];
+  localStorage.setItem(overrideKey,JSON.stringify(scheduleOverrides));render();
+}
 function render(){
   const y=current.getFullYear(), m=current.getMonth(), total=daysInMonth(y,m);
-  const first=new Date(y,m,1);
-  document.getElementById("monthTitle").textContent = `Escala de ${monthNames[m]} de ${y}`;
+  document.getElementById("monthTitle").textContent = `Escala 5x2 — ${monthNames[m]} de ${y}`;
   document.getElementById("monthLabel").textContent = `${monthNames[m]} / ${y}`;
-
   const active=data.employees.filter(e=>e.active!==false);
-  let html="<thead><tr><th class='name-head'>Funcionários</th>";
+  // Cabeçalho com semanas agrupadas (segunda a domingo), alternando ímpar/par.
+  let html="<thead><tr><th class='name-head' rowspan='2'>Funcionário</th>";
+  const weekChunks=[]; let chunkStart=1;
   for(let day=1;day<=total;day++){
-    const d=new Date(y,m,day), sun=d.getDay()===0;
-    html+=`<th class="${sun?"sunday-head ":""}${isToday(d)?"today-head":""}">
-      <div class="day-head">${weekNames[d.getDay()]}</div><div class="day-number">${day}</div></th>`;
+    const d=new Date(y,m,day);
+    if(day===1) chunkStart=1;
+    if(d.getDay()===0 || day===total){
+      const chunkEnd=day, weekIndex=weekChunks.length;
+      const parity=weekIndex%2===0?"Semana ímpar":"Semana par";
+      html+=`<th colspan="${chunkEnd-chunkStart+1}" class="week-group ${weekIndex%2===0?'week-odd':'week-even'}">${parity}</th>`;
+      weekChunks.push([chunkStart,chunkEnd]); chunkStart=day+1;
+    }
+  }
+  html+="</tr><tr>";
+  for(let day=1;day<=total;day++){
+    const d=new Date(y,m,day);
+    html+=`<th class="${d.getDay()===0?'sunday-head ':''}${isToday(d)?'today-head':''}"><div class="day-head">${weekNames[d.getDay()]}</div><div class="day-number">${day}</div></th>`;
   }
   html+="</tr></thead><tbody>";
-
-  let sundaysWorked=0, folgas=0;
+  let folgas=0, workedSundays=0;
   active.forEach(emp=>{
-    html+=`<tr><td class="name-cell"><div class="person"><div class="avatar">${initials(emp.name)}</div><div><strong>${escapeHtml(emp.name)}</strong><small>${escapeHtml(emp.defaultShift==="M1"?"Turno padrão: manhã":"Turno padrão: tarde")} • folga: ${fullWeek[Number(emp.dayOff)]}</small></div></div></td>`;
+    html+=`<tr draggable="true" data-employee-id="${emp.id}" ondragstart="startEmployeeDrag('${emp.id}',event)" ondragover="allowEmployeeDrop(event)" ondrop="dropEmployeeRow('${emp.id}',event)" ondragend="endEmployeeDrag()"><td class="name-cell"><div class="person"><div class="avatar">${initials(emp.name)}</div><div><strong>${escapeHtml(emp.name)}</strong><small>${emp.role==='manager'?'Gerente • folga domingo e segunda':'Regime 5x2 • folgas fixas'}</small></div></div></td>`;
     for(let day=1;day<=total;day++){
-      const d=new Date(y,m,day), s=getStatus(emp,d);
-      if(s.code==="D") sundaysWorked++;
-      if(s.code==="F" || s.code==="FE") folgas++;
-      html+=`<td title="${s.label} — ${d.toLocaleDateString("pt-BR")}"><span class="shift ${s.cls}">${s.code}</span></td>`;
+      const d=new Date(y,m,day), st=get5x2Status(emp,d);
+      if(st.code==="F")folgas++;
+      if(st.working&&d.getDay()===0)workedSundays++;
+      html+=`<td title="${st.label} • ${d.toLocaleDateString('pt-BR')}" onclick="cycleCellById('${emp.id}','${dateKey(d)}')"><span class="shift ${st.cls}" role="button" aria-label="${st.label}">${st.code}</span></td>`;
     }
     html+="</tr>";
   });
-
-  if(!active.length){
-    html+=`<tr><td class="name-cell"><div class="person"><div class="avatar">+</div><div><strong>Nenhum colaborador</strong><small>Adicione o primeiro colaborador.</small></div></div></td>${Array.from({length:total},()=>"<td class='empty'>—</td>").join("")}</tr>`;
+  if(!active.length){html+=`<tr><td class="name-cell">Nenhum colaborador</td>${Array.from({length:total},()=>"<td class='empty'>—</td>").join("")}</tr>`;}
+  html+=`<tr class="presence-row"><td class="name-cell">Total presente</td>`;
+  for(let day=1;day<=total;day++){
+    const d=new Date(y,m,day), count=active.filter(e=>get5x2Status(e,d).working).length;
+    html+=`<td title="${count} colaborador(es) presente(s)">${count}</td>`;
   }
-  html+="</tbody>";
+  html+="</tr></tbody>";
   document.getElementById("scheduleTable").innerHTML=html;
-
+  const sig=document.getElementById("signatureGrid");
+  if(sig) sig.innerHTML=active.filter(e=>e.role!=="manager").map(e=>`<div class="signature-line">${escapeHtml(e.name)}<span>Assinatura</span></div>`).join("");
   document.getElementById("statPeople").textContent=active.length;
   document.getElementById("statDays").textContent=total;
-  document.getElementById("statSundays").textContent=sundaysWorked;
+  document.getElementById("statSundays").textContent=workedSundays;
   document.getElementById("statFolgas").textContent=folgas;
 }
+let draggedEmployeeId = null;
+function startEmployeeDrag(empId, event){
+  draggedEmployeeId = empId;
+  if(event && event.dataTransfer){
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", empId);
+  }
+}
+function allowEmployeeDrop(event){
+  if(event) event.preventDefault();
+}
+function dropEmployeeRow(targetId, event){
+  if(event) event.preventDefault();
+  const sourceId = draggedEmployeeId || (event && event.dataTransfer ? event.dataTransfer.getData("text/plain") : "");
+  if(!sourceId || sourceId===targetId) return;
+  const from = data.employees.findIndex(e=>e.id===sourceId);
+  const to = data.employees.findIndex(e=>e.id===targetId);
+  if(from<0 || to<0) return;
+  const [moved] = data.employees.splice(from,1);
+  data.employees.splice(to,0,moved);
+  save();
+  render();
+}
+function endEmployeeDrag(){ draggedEmployeeId = null; }
+function cycleCellById(empId,key){const emp=data.employees.find(e=>e.id===empId);if(emp)cycleCell(emp,dateFromKey(key));}
 
 function escapeHtml(v){
   return String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -413,50 +528,31 @@ function escapeHtml(v){
 function changeMonth(delta){ current.setMonth(current.getMonth()+delta); render(); }
 function goToday(){ const t=new Date(); current=new Date(t.getFullYear(),t.getMonth(),1); render(); }
 
+const regularOffOptions=[1,2,3,4,5,6,0];
+function populateOffDaySelects(role,values=[2,3]){
+  const days=role==="manager"?[0,1]:regularOffOptions;
+  ["fOff1","fOff2"].forEach((id,idx)=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML=days.map(d=>`<option value="${d}">${fullWeek[d]}</option>`).join("");
+    sel.value=String(values[idx]!==undefined&&days.includes(Number(values[idx]))?values[idx]:days[idx%days.length]);
+  });
+  document.getElementById("offDaysHelp").textContent=role==="manager"?"Gerente: folgas fixas domingo e segunda-feira.":"Colaboradores podem folgar de segunda a sábado; quem folgar sábado trabalhará domingo. Folga domingo é possível quando sábado for trabalhado.";
+}
 function openEmployeeModal(id=null){
   editingId=id;
   tempExtraDates=[];
   const emp=id ? data.employees.find(e=>e.id===id) : null;
-
+  const role=emp?.role||(emp?.name?.toLowerCase()==="guilherme"?"manager":"staff");
   document.getElementById("modalTitle").textContent=emp?"Editar colaborador":"Adicionar colaborador";
   document.getElementById("fName").value=emp?.name||"";
-  document.getElementById("fDefaultShift").value=emp?.defaultShift||"T1";
-  document.getElementById("fDayOff").value=emp?.dayOff??1;
-  document.getElementById("fSundayAnchor").value=emp?.sundayAnchor||getFirstSundayOfMonth();
-  document.getElementById("fSundayWorks").value=String(emp?.sundayWorks ?? true);
-
-  const weekly=emp?.weekly||buildLegacyWeekly(emp||{});
-  document.querySelectorAll("#weeklyGrid select").forEach(s=>{
-    s.value=weekly[s.dataset.weekday]||"T1";
-  });
-
+  document.getElementById("fRole").value=role;
+  populateOffDaySelects(role,emp?.offDays|| (role==="manager"?[0,1]:[2,3]));
   tempExtraDates=[...(emp?.extraDays||[])];
   renderExtraDates();
-  syncWeeklyDayOff();
-
   document.getElementById("employeeModal").classList.add("open");
   setTimeout(()=>document.getElementById("fName").focus(),50);
 }
-function buildLegacyWeekly(emp){
-  const weekly={};
-  for(let d=1;d<=6;d++) weekly[String(d)]=emp.defaultShift||"T1";
-  (emp.morningDays||[]).forEach(d=>weekly[String(d)]="M1");
-  if(emp.dayOff!==undefined) weekly[String(emp.dayOff)]="F";
-  return weekly;
-}
-
-function syncWeeklyDayOff(){
-  const dayOff=document.getElementById("fDayOff").value;
-  document.querySelectorAll("#weeklyGrid select").forEach(s=>{
-    const isOff=s.dataset.weekday===dayOff;
-    if(isOff) s.value="F";
-    s.disabled=isOff;
-    s.title=isOff?"Folga semanal definida acima":"";
-  });
-}
-
-document.getElementById("fDayOff").addEventListener("change",syncWeeklyDayOff);
-
+ document.getElementById("fRole").addEventListener("change",()=>populateOffDaySelects(document.getElementById("fRole").value));
 function closeEmployeeModal(){ document.getElementById("employeeModal").classList.remove("open"); editingId=null; }
 
 function getFirstSundayOfMonth(){
@@ -484,34 +580,36 @@ function renderExtraDates(){
 
 document.getElementById("employeeForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const dayOff=Number(document.getElementById("fDayOff").value);
-  const weekly={};
-  document.querySelectorAll("#weeklyGrid select").forEach(s=>{
-    weekly[s.dataset.weekday]=s.value;
-  });
-  weekly[String(dayOff)]="F";
-
-  const employee={
-    id:editingId||uid(),
-    name:document.getElementById("fName").value.trim(),
-    defaultShift:document.getElementById("fDefaultShift").value,
-    dayOff:dayOff,
-    sundayAnchor:document.getElementById("fSundayAnchor").value,
-    sundayWorks:document.getElementById("fSundayWorks").value==="true",
-    weekly:weekly,
-    extraDays:[...tempExtraDates],
-    active:true
-  };
+  const role=document.getElementById("fRole").value;
+  const offDays=[Number(document.getElementById("fOff1").value),Number(document.getElementById("fOff2").value)];
+  if(offDays[0]===offDays[1]){toast("Selecione dois dias de folga diferentes.");return;}
+  if(role==="manager" && (offDays.slice().sort((a,b)=>a-b).join(",")!=="0,1")){toast("Para gerente, as folgas são domingo e segunda.");return;}
+  if(role!=="manager" && offDays.some(d=>![1,2,3,4,5].includes(d))){toast("Colaboradores podem folgar de segunda a sábado; quem folgar sábado trabalhará domingo. Folga domingo é possível quando sábado for trabalhado.");return;}
+  const employee={id:editingId||uid(),name:document.getElementById("fName").value.trim(),role,offDays,
+    extraDays:[...tempExtraDates],active:true};
   if(!employee.name)return;
-  if(editingId){
-    const i=data.employees.findIndex(x=>x.id===editingId);
-    data.employees[i]=employee;
-    toast("Colaborador atualizado.");
-  }else{
-    data.employees.push(employee);
-    toast("Colaborador adicionado.");
+  // Simula troca na equipe para validar cobertura mínima em todos os dias do mês visível.
+  const original=editingId?data.employees.find(x=>x.id===editingId):null;
+  const originalSnapshot=original?JSON.parse(JSON.stringify(original)):null;
+  if(original){Object.assign(original,employee);}else data.employees.push(employee);
+  let valid=true;
+  const y=current.getFullYear(),m=current.getMonth(),days=daysInMonth(y,m);
+  for(let day=1;day<=days;day++){
+    const d=new Date(y,m,day);
+    if(data.employees.filter(x=>x.active!==false&&get5x2Status(x,d).working).length<3){valid=false;break;}
   }
-  save(); closeEmployeeModal(); render();
+  // Também verifica as sequências de trabalho na virada do mês e nas datas adjacentes.
+  if(valid){
+    for(const x of data.employees.filter(x=>x.active!==false)){
+      for(let day=1;day<=days;day++){
+        const d=new Date(y,m,day), code=get5x2Status(x,d).code;
+        if(consecutiveWorkCount(x,d,code)>5){valid=false;break;}
+      }
+      if(!valid)break;
+    }
+  }
+  if(!valid){if(original) Object.assign(original,originalSnapshot); else data.employees.pop();toast("Cadastro não salvo: verifique a cobertura mínima de 3 pessoas e o limite de 5 dias consecutivos.");return;}
+  save();closeEmployeeModal();render();toast(editingId?"Colaborador atualizado.":"Colaborador adicionado.");
 });
 
 function openManage(){
@@ -524,41 +622,126 @@ function renderEmployeeList(){
   if(!data.employees.length){el.innerHTML='<div class="help">Nenhum colaborador cadastrado.</div>';return}
   el.innerHTML=data.employees.map(e=>`
     <div class="employee-item">
-      <div class="employee-info"><div class="avatar">${initials(e.name)}</div><div><b>${escapeHtml(e.name)}</b><small>${e.active===false?"Inativo":"Ativo"} • folga ${fullWeek[Number(e.dayOff)]}</small></div></div>
+      <div class="employee-info"><div class="avatar">${initials(e.name)}</div><div><b>${escapeHtml(e.name)}</b><small>${e.active===false?"Inativo":"Ativo"} • folgas ${(e.offDays||[]).map(d=>fullWeek[Number(d)]).join(" + ")||"a definir"}</small></div></div>
       <div class="actions">
         <button class="mini" onclick="openEmployeeModal('${e.id}');closeManage()">Editar</button>
         <button class="mini btn-danger" onclick="deleteEmployee('${e.id}')">Excluir</button>
       </div>
     </div>`).join("");
 }
+function openSwapModal(){
+  const eligible=data.employees.filter(e=>e.active!==false && e.role!=="manager" && (e.offDays||[]).length>=2);
+  if(eligible.length<2){toast("É necessário ter pelo menos dois colaboradores com folgas fixas para trocar.");return;}
+  const selects=[document.getElementById("swapEmp1"),document.getElementById("swapEmp2")];
+  selects.forEach(sel=>sel.innerHTML=eligible.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join(""));
+  selects[1].selectedIndex=1;
+  populateSwapOffs();
+  closeManage();document.getElementById("swapModal").classList.add("open");
+}
+function closeSwapModal(){document.getElementById("swapModal").classList.remove("open");}
+function populateSwapOffs(){
+  const e1=data.employees.find(e=>e.id===document.getElementById("swapEmp1").value);
+  const e2=data.employees.find(e=>e.id===document.getElementById("swapEmp2").value);
+  [ ["swapOff1",e1], ["swapOff2",e2] ].forEach(([id,e])=>{
+    const sel=document.getElementById(id); if(!sel||!e)return;
+    sel.innerHTML=(e.offDays||[]).map(d=>`<option value="${d}">${fullWeek[Number(d)]}</option>`).join("");
+  });
+}
+function validateTeamForMonth(){
+  for(const e of data.employees.filter(e=>e.active!==false && e.role!=="manager")){
+    const off=(e.offDays||[]).map(Number);
+    if(off.length!==2 || off[0]===off[1] || (off.includes(0)&&off.includes(6))) return false;
+  }
+  const y=current.getFullYear(),m=current.getMonth(),days=daysInMonth(y,m);
+  for(let day=1;day<=days;day++){
+    const d=new Date(y,m,day);
+    if(data.employees.filter(e=>e.active!==false&&get5x2Status(e,d).working).length<3)return false;
+  }
+  for(const e of data.employees.filter(e=>e.active!==false)){
+    for(let day=1;day<=days;day++){
+      const d=new Date(y,m,day);
+      if(consecutiveWorkCount(e,d,get5x2Status(e,d).code)>5)return false;
+    }
+  }
+  return true;
+}
+function confirmSwapOffDays(){
+  const id1=document.getElementById("swapEmp1").value,id2=document.getElementById("swapEmp2").value;
+  if(!id1||!id2||id1===id2){toast("Selecione dois colaboradores diferentes.");return;}
+  const e1=data.employees.find(e=>e.id===id1),e2=data.employees.find(e=>e.id===id2);
+  const day1=Number(document.getElementById("swapOff1").value),day2=Number(document.getElementById("swapOff2").value);
+  if(!e1||!e2||!e1.offDays.includes(day1)||!e2.offDays.includes(day2)){toast("Folgas selecionadas inválidas.");return;}
+  const before1=[...e1.offDays],before2=[...e2.offDays];
+  e1.offDays=e1.offDays.map(d=>Number(d)===day1?day2:Number(d));
+  e2.offDays=e2.offDays.map(d=>Number(d)===day2?day1:Number(d));
+  if(!validateTeamForMonth()){
+    e1.offDays=before1;e2.offDays=before2;
+    toast("Troca bloqueada: cobertura abaixo de 3 ou mais de 5 dias consecutivos.");return;
+  }
+  save();closeSwapModal();renderEmployeeList();render();toast("Folgas trocadas com sucesso.");
+}
 function deleteEmployee(id){
   const e=data.employees.find(x=>x.id===id);
   if(!e)return;
   if(!confirm(`Excluir ${e.name}?`))return;
   data.employees=data.employees.filter(x=>x.id!==id);
-  save();renderEmployeeList();render();toast("Colaborador excluído.");
+  Object.keys(scheduleOverrides).forEach(k=>{if(scheduleOverrides[k][id])delete scheduleOverrides[k][id];if(!Object.keys(scheduleOverrides[k]).length)delete scheduleOverrides[k];});
+  localStorage.setItem(overrideKey,JSON.stringify(scheduleOverrides));save();renderEmployeeList();render();toast("Colaborador excluído.");
 }
 function toast(msg){
   const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
   clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove("show"),2300);
 }
 
-// Exemplo inicial para a tela não ficar vazia. Pode ser apagado pelo usuário.
-if(!data.employees.length){
+// Defaults and migration: four store operators + manager, with fixed 5x2 off-days.
+// The pair allocation keeps at least 3 people on weekdays, nobody off Saturday,
+// and cyclic work streaks <= 5 days. Sunday off for one operator and the manager.
+const fixedPairs={"Alison":[2,0],"Franciele":[3,5],"Maria Eduarda":[5,2],"Stefany":[1,3],"Guilherme":[0,1]};
+let rosterChanged=false;
+if(!Array.isArray(data.employees) || data.employees.length===0){
   data.employees=[
-    {id:uid(),name:"Alison",defaultShift:"T1",dayOff:2,sundayAnchor:"2026-09-06",sundayWorks:true,
-      weekly:{"1":"M1","2":"F","3":"T1","4":"T1","5":"T1","6":"T1"},extraDays:[],active:true},
-    {id:uid(),name:"Franciele",defaultShift:"T1",dayOff:3,sundayAnchor:"2026-09-06",sundayWorks:false,
-      weekly:{"1":"T1","2":"T1","3":"F","4":"T1","5":"T1","6":"T1"},extraDays:[],active:true},
-    {id:uid(),name:"Maria Eduarda",defaultShift:"T1",dayOff:5,sundayAnchor:"2026-09-06",sundayWorks:true,
-      weekly:{"1":"T1","2":"T1","3":"T1","4":"T1","5":"F","6":"T1"},extraDays:[],active:true},
-    {id:uid(),name:"Sara",defaultShift:"T1",dayOff:5,sundayAnchor:"2026-09-06",sundayWorks:false,
-      weekly:{"1":"T1","2":"T1","3":"T1","4":"T1","5":"F","6":"T1"},extraDays:[],active:true},
-    {id:uid(),name:"Stefany",defaultShift:"M1",dayOff:1,sundayAnchor:"2026-09-06",sundayWorks:true,
-      weekly:{"1":"F","2":"M1","3":"M1","4":"M1","5":"M1","6":"M1"},extraDays:[],active:true}
+    {id:uid(),name:"Alison",role:"staff",offDays:[2,0],extraDays:[],active:true},
+    {id:uid(),name:"Franciele",role:"staff",offDays:[3,5],extraDays:[],active:true},
+    {id:uid(),name:"Maria Eduarda",role:"staff",offDays:[5,2],extraDays:[],active:true},
+    {id:uid(),name:"Stefany",role:"staff",offDays:[1,3],extraDays:[],active:true},
+    {id:uid(),name:"Guilherme",role:"manager",offDays:[0,1],extraDays:[],active:true}
   ];
-  save();
+  rosterChanged=true;
+}else{
+  // Remove Sara as requested and normalize the four operators and manager to the new pairs.
+  const removedSara=data.employees.find(e=>String(e.name||"").trim().toLowerCase()==="sara");
+  if(removedSara){Object.keys(scheduleOverrides).forEach(k=>{if(scheduleOverrides[k])delete scheduleOverrides[k][removedSara.id];if(scheduleOverrides[k]&&!Object.keys(scheduleOverrides[k]).length)delete scheduleOverrides[k];});rosterChanged=true;}
+  data.employees=data.employees.filter(e=>String(e.name||"").trim().toLowerCase()!=="sara");
+  data.employees.forEach(e=>{
+    const nm=String(e.name||"").trim();
+    if(fixedPairs[nm]){
+      const pair=fixedPairs[nm];
+      if(JSON.stringify((e.offDays||[]).map(Number))!==JSON.stringify(pair)) e.offDays=[...pair],rosterChanged=true;
+      const role=nm==="Guilherme"?"manager":"staff";
+      if(e.role!==role)e.role=role,rosterChanged=true;
+      if(e.active===undefined)e.active=true,rosterChanged=true;
+    }
+  });
+  if(!data.employees.some(e=>String(e.name||"").trim().toLowerCase()==="alison")) {data.employees.push({id:uid(),name:"Alison",role:"staff",offDays:[2,0],extraDays:[],active:true});rosterChanged=true;}
+  if(!data.employees.some(e=>String(e.name||"").trim().toLowerCase()==="guilherme")){
+    data.employees.push({id:uid(),name:"Guilherme",role:"manager",offDays:[0,1],extraDays:[],active:true});rosterChanged=true;
+  }
+  // Ensure any legacy records have a usable array; leave unrelated employees in place.
+  data.employees.forEach(e=>{
+    if(!Array.isArray(e.offDays)){e.offDays=fixedPairs[e.name]||[2,3];rosterChanged=true;}
+    if(e.name==="Alison" && JSON.stringify((e.offDays||[]).map(Number))!==JSON.stringify([2,0])) {e.offDays=[2,0];rosterChanged=true;}
+    if(!e.role){e.role=e.name==="Guilherme"?"manager":"staff";rosterChanged=true;}
+  });
 }
+// Remove Sara's one-off overrides from any stored dates.
+Object.keys(scheduleOverrides).forEach(k=>{
+  const byEmployee=scheduleOverrides[k];
+  if(byEmployee && typeof byEmployee==="object"){
+    if(!Object.keys(byEmployee).length)delete scheduleOverrides[k];
+  }
+});
+if(rosterChanged)save();
+localStorage.setItem(overrideKey,JSON.stringify(scheduleOverrides));
 
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){closeEmployeeModal();closeManage()}
@@ -567,17 +750,7 @@ document.getElementById("employeeModal").addEventListener("click",e=>{if(e.targe
 document.getElementById("manageModal").addEventListener("click",e=>{if(e.target.id==="manageModal")closeManage()});
 
 // Atalho M para gerenciamento não é usado para evitar conflitos com digitação.
-function migrateLegacyRecords(){
-  let changed=false;
-  data.employees.forEach(e=>{
-    if(!e.weekly){
-      e.weekly=buildLegacyWeekly(e);
-      changed=true;
-    }
-  });
-  if(changed) save();
-}
-migrateLegacyRecords();
+// 5x2 não usa regras semanais legadas; renderização direta a partir de offDays e overrides.
 
 render();
 </script>
